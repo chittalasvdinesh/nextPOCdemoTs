@@ -1,0 +1,515 @@
+The router will automatically route files named index to the root of the directory.
+
+pages/index.js → /
+pages/blog/index.js → /blog
+
+Nested routes
+
+
+pages/blog/first-post.js → /blog/first-post
+pages/dashboard/settings/username.js → /dashboard/settings/username
+
+
+Pages with Dynamic Routes:
+
+if you create a file called pages/posts/[id].js, then it will be accessible at posts/1, posts/2, etc.
+
+pages/blog/[slug].js where [slug] is the Dynamic Segment for blog posts.
+
+import { useRouter } from 'next/router'
+ 
+export default function Page() {
+  const router = useRouter()
+  return <p>Post: {router.query.slug}</p>
+}
+
+
+Catch-all Segments:
+
+For example, pages/shop/[...slug].js will match /shop/clothes,
+ but also /shop/clothes/tops, /shop/clothes/tops/t-shirts, and so on.
+
+pages/shop/[...slug].js->	/shop/a	->{ slug: ['a'] }
+pages/shop/[...slug].js ->	/shop/a/b ->	{ slug: ['a', 'b'] }
+pages/shop/[...slug].js ->	/shop/a/b/c -	{ slug: ['a', 'b', 'c'] }
+
+Optional Catch-all Segments
+
+Catch-all Segments can be made optional by including the parameter in double square brackets: [[...segmentName]].
+
+For example, pages/shop/[[...slug]].js will also match /shop, in addition to /shop/clothes, /shop/clothes/tops, /shop/clothes/tops/t-shirts.
+
+The difference between catch-all and optional catch-all segments is that with optional, the route without the parameter is also matched (/shop in the example above).
+
+
+Any <Link /> in the viewport (initially or through scroll) will be prefetched by default (including the corresponding data) for pages using Static Generation. The corresponding data for server-rendered routes is fetched only when the <Link /> is clicked.
+
+<Link href="/blog/hello-world">Blog Post</Link>
+
+ <Link href={`/blog/${encodeURIComponent(post.slug)}`}>  ---> used in the example to keep the path utf-8 compatible.
+
+
+
+  <Link
+            href={{
+              pathname: '/blog/[slug]',
+              query: { slug: post.slug },
+            }}
+          >
+
+
+To access the router object in a React component you can use useRouter or withRouter.
+
+
+Imperative Routing:
+import { useRouter } from 'next/router'
+ 
+export default function ReadMore() {
+  const router = useRouter()
+ 
+  return (
+    <button onClick={() => router.push('/about')}>
+      Click here to read more
+    </button>
+  )
+}
+
+Shallow routing:
+
+Shallow routing allows you to change the URL without running data fetching methods again, that includes getServerSideProps, getStaticProps, and getInitialProps.
+
+You'll receive the updated pathname and the query via the router object (added by useRouter or withRouter), without losing state.
+
+To enable shallow routing, set the shallow option to true.
+
+router.push('/?counter=10', undefined, { shallow: true })
+
+redirects:
+Redirects allow you to redirect an incoming request path to a different destination path.
+
+module.exports = {
+  async redirects() {
+    return [
+      {
+        source: '/about',
+        destination: '/',
+        permanent: true,
+      },
+    ]
+  },
+}
+
+Custom App:
+
+Next.js uses the App component to initialize pages. You can override it and control the page initialization and:
+
+Create a shared layout between page changes
+Inject additional data into pages
+Add global CSS
+
+
+ex:
+import { Layout } from "@/components/Layout";
+import "@/styles/globals.css";
+import type { AppProps } from "next/app";
+
+export default function MyApp({ Component, pageProps }: AppProps) {
+
+
+  return <>
+    <Layout>
+      <Component {...pageProps} />
+    </Layout>
+  </>
+}
+
+Custom Document
+A custom Document can update the <html> and <body> tags used to render a Page.
+
+To override the default Document, create the file pages/_document as shown below:
+
+
+_document is only rendered on the server, so event handlers like onClick cannot be used in this file.
+<Html>, <Head />, <Main /> and <NextScript /> are required for the page to be properly rendered.
+
+
+API Routes
+
+API routes provide a solution to build a public API with Next.js.
+
+Any file inside the folder pages/api is mapped to /api/* and will be treated as an API endpoint instead of a page. They are server-side only bundles and won't increase your client-side bundle size.
+
+ex:
+import type { NextApiRequest, NextApiResponse } from 'next'
+ 
+type ResponseData = {
+  message: string
+}
+ 
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ResponseData>
+) {
+  res.status(200).json({ message: 'Hello from Next.js!' })
+}
+
+HTTP Methods
+To handle different HTTP methods in an API route, you can use req.method in your request handler, like so:
+
+import type { NextApiRequest, NextApiResponse } from 'next'
+ 
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'POST') {
+    // Process a POST request
+  } else {
+    // Handle any other HTTP method
+  }
+}
+
+
+Request Helpers:
+req.cookies - An object containing the cookies sent by the request. Defaults to {}
+req.query - An object containing the query string. Defaults to {}
+req.body - An object containing the body parsed by content-type, or null if no body was sent
+
+Response Helpers:
+
+The Server Response object, (often abbreviated as res) includes a set of Express.js-like helper methods to improve the developer experience and increase the speed of creating new API endpoints.
+
+
+res.status(code) - A function to set the status code. code must be a valid HTTP status code
+res.json(body) - Sends a JSON response. body must be a serializable object
+res.send(body) - Sends the HTTP response. body can be a string, an object or a Buffer
+res.redirect([status,] path) - Redirects to a specified path or URL. status must be a valid HTTP status code. If not specified, status defaults to "307" "Temporary redirect".
+res.revalidate(urlPath) - Revalidate a page on demand using getStaticProps. urlPath must be a string.
+
+ex:
+import type { NextApiRequest, NextApiResponse } from 'next'
+ 
+type ResponseData = {
+  message: string
+}
+ 
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ResponseData>
+) {
+  res.status(200).json({ message: 'Hello from Next.js!' })
+}
+
+
+import type { NextApiRequest, NextApiResponse } from 'next'
+ 
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  try {
+    const result = await someAsyncOperation()
+    res.status(200).json({ result })
+  } catch (err) {
+    res.status(500).json({ error: 'failed to load data' })
+  }
+}
+
+
+import type { NextApiRequest, NextApiResponse } from 'next'
+ 
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { name, message } = req.body
+ 
+  try {
+    await handleFormInputAsync({ name, message })
+    res.redirect(307, '/')
+  } catch (err) {
+    res.status(500).send({ error: 'Failed to fetch data' })
+  }
+}
+
+Dynamic API Routes
+API Routes support dynamic routes, and follow the same file naming rules used for pages/.
+
+
+import type { NextApiRequest, NextApiResponse } from 'next'
+ 
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { pid } = req.query
+  res.end(`Post: ${pid}`)
+}
+
+
+catch all routes:
+
+import { NextApiRequest, NextApiResponse } from "next";
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+    const  param  = req.query.param as string[] | undefined;
+    res.end(`Post ${param ? param.join(', ') : ''}`);
+}
+
+
+Optional catch all API routes:
+Catch all routes can be made optional by including the parameter in double brackets ([[...slug]]).
+
+Customizing The 404 Page
+
+pages/404.js
+
+export default function Custom404() {
+  return <h1>404 - Page Not Found</h1>
+}
+
+
+
+Customizing The 500 Page
+
+pages/500.js
+
+export default function Custom500() {
+  return <h1>500 - Page Not Found</h1>
+}
+
+
+
+Pages Router
+...
+Routing
+Custom Errors
+Custom Errors
+404 Page
+A 404 page may be accessed very often. Server-rendering an error page for every visit increases the load of the Next.js server. This can result in increased costs and slow experiences.
+
+To avoid the above pitfalls, Next.js provides a static 404 page by default without having to add any additional files.
+
+Customizing The 404 Page
+To create a custom 404 page you can create a pages/404.js file. This file is statically generated at build time.
+
+pages/404.js
+
+export default function Custom404() {
+  return <h1>404 - Page Not Found</h1>
+}
+Good to know: You can use getStaticProps inside this page if you need to fetch data at build time.
+
+500 Page
+Server-rendering an error page for every visit adds complexity to responding to errors. To help users get responses to errors as fast as possible, Next.js provides a static 500 page by default without having to add any additional files.
+
+Customizing The 500 Page
+To customize the 500 page you can create a pages/500.js file. This file is statically generated at build time.
+
+pages/500.js
+
+export default function Custom500() {
+  return <h1>500 - Server-side error occurred</h1>
+}
+Good to know: You can use getStaticProps inside this page if you need to fetch data at build time.
+
+
+
+More Advanced Error Page Customizing:
+500 errors are handled both client-side and server-side by the Error component. If you wish to override it, define the file pages/_error.js and add the following code:
+
+
+function Error({ statusCode }) {
+  return (
+    <p>
+      {statusCode
+        ? `An error ${statusCode} occurred on server`
+        : 'An error occurred on client'}
+    </p>
+  )
+}
+ 
+Error.getInitialProps = ({ res, err }) => {
+  const statusCode = res ? res.statusCode : err ? err.statusCode : 404
+  return { statusCode }
+}
+ 
+export default Error;
+
+
+import Error from 'next/error'
+import React from 'react'
+
+ const Todos = ({errorCode,data}:{errorCode:number,data:[]}) => {
+    if(errorCode){
+        return <Error statusCode={errorCode} title='An Error Occured'/>
+    }
+  return (<>
+    <div>Todos</div>
+    {data.map((val:any)=>{
+        return <div key={val.id}>
+           {val.userId} | {val.title} | {val.completed?"Done":"Not Done"}
+        </div>
+    })}
+    </>
+  )
+};
+
+export default Todos
+
+export const getServerSideProps=async()=>{
+  const res=await fetch("https://jsonplaceholder.typicode.com/todos");
+  const errorCode=res.ok?false:res.status
+  const data=await res.json();
+
+  return{
+    props:{errorCode,data}
+  }
+}
+
+
+Reusing the built-in error page:
+
+
+
+Internationalization (i18n) - Refer this for language related locales
+
+
+Authentication:
+Identity| who a user is
+
+Authorization:
+Access | verifies what are the permissions the user has
+
+
+Authentication in next.js:
+-> client-side Authentication
+-> server-side Authentication
+-> API routes Authentication
+
+user data-> persist user data with database
+no need tp persist with help of auth services like github, gmail, facebook...
+
+
+
+Optimising:
+
+-Image
+-Font:
+next/font will automatically optimize your fonts (including custom fonts)
+ and remove external network requests for improved privacy and performance.
+
+ next/font includes built-in automatic self-hosting for any font file. 
+ This means you can optimally load web fonts with zero layout shift
+
+
+
+
+
+
+preview:
+we talked about how to pre-render a page at build time (Static Generation) using getStaticProps and getStaticPaths.
+
+Static Generation is useful when your pages fetch data from a headless CMS. However, it’s not ideal when you’re writing a draft on your headless CMS and want to preview the draft immediately on your page. You’d want Next.js to render these pages at request time instead of build time and fetch the draft content instead of the published content. You’d want Next.js to bypass Static Generation only for this specific case.
+
+Next.js has a feature called Preview Mode which solves this problem. Here are instructions on how to use it.
+
+
+On this page
+Step 1: Create and access a preview API route
+Securely accessing it from your Headless CMS
+Step 2: Update getStaticProps
+Note: This feature is superseded by Draft Mode.
+
+In the Pages documentation and the Data Fetching documentation, we talked about how to pre-render a page at build time (Static Generation) using getStaticProps and getStaticPaths.
+
+Static Generation is useful when your pages fetch data from a headless CMS. However, it’s not ideal when you’re writing a draft on your headless CMS and want to preview the draft immediately on your page. You’d want Next.js to render these pages at request time instead of build time and fetch the draft content instead of the published content. You’d want Next.js to bypass Static Generation only for this specific case.
+
+Next.js has a feature called Preview Mode which solves this problem. Here are instructions on how to use it.
+
+Step 1: Create and access a preview API route:
+
+// simple example for testing it manually from your browser.
+
+pages/api/preview.js
+
+export default function handler(req, res) {
+  res.setPreviewData({user:"dinesh"})
+  res.end('Preview mode enabled')
+}
+
+//for diasabling preview mode
+
+pages/api/disable-preview.js
+
+import { NextApiRequest, NextApiResponse } from "next";
+
+export default function handler(req:NextApiRequest,res:NextApiResponse){
+    res.clearPreviewData();
+    res.end("Preview mode disabled")
+}
+
+Step 2: Update getStaticProps:
+
+import { GetStaticProps } from 'next';
+import React from 'react'
+
+const News = ({data}:{data:string}) => {
+  return (
+    <h1 className='content'>News - {data}</h1>
+  )
+}
+
+
+export default News;
+
+
+
+export const getStaticProps=(async(context)=>{
+  console.log("Running get static props",context.previewData)
+    return {
+        props:{
+            data: context.preview?"List of Draft articles": "List of published articles"
+        }
+    }
+
+}) satisfies GetStaticProps
+
+
+
+Environment Variables:
+Next.js comes with built-in support for environment variables, which allows you to do the following:
+
+Use .env.local to load environment variables
+Bundle environment variables for the browser by prefixing with NEXT_PUBLIC_
+
+
+Next.js has built-in support for loading environment variables from .env.local into process.env.
+
+//.env.local
+
+DB_USER=Dinesh
+DB_PASSWORD=Password
+TWITTER_USER=Chittalasvdinesh
+TWITTER_URL=https://twitter.com/$TWITTER_USER
+
+This loads process.env.DB_HOST, process.env.DB_USER, and process.env.DB_PASS into the Node.js environment automatically allowing you to use them in Next.js data fetching methods and API routes.
+
+
+ex:/posts/index.tsx
+export const getServerSideProps=(async()=>{
+  const user=process.env.DB_USER
+  const password=process.env.DB_PASSWORD;
+  const twitterURL=process.env.TWITTER_URL;
+  // console.log(context.query)
+  const res=await fetch("https://jsonplaceholder.typicode.com/posts");
+  const data=await res.json();
+  console.log(user,password,twitterURL)
+
+  return{
+    props:{posts:data}
+  }
+}) satisfies GetServerSideProps
+
+
+ If you need to use variable with a $ in the actual value, it needs to be escaped e.g. \$.
+
+ In order to make the value of an environment variable accessible in the browser,
+ex:
+NEXT_PUBLIC_DEMO_ID=abcdef
+NEXT_PUBLIC_NUMBER_ID=12345
+
