@@ -9,7 +9,7 @@ Nested routes
 pages/blog/first-post.js → /blog/first-post
 pages/dashboard/settings/username.js → /dashboard/settings/username
 
-
+//
 Pages with Dynamic Routes:
 
 if you create a file called pages/posts/[id].js, then it will be accessible at posts/1, posts/2, etc.
